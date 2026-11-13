@@ -282,6 +282,31 @@ div[data-baseweb="popover"] li:hover, div[data-baseweb="popover"] li[aria-select
     color: #12281A !important;
     font-weight: 700 !important;
 }
+
+/* ---- Dropdown fix v3: paint EVERY layer inside the selectbox, not just the known ones ---- */
+[data-testid="stSelectbox"] *,
+[data-testid="stSelectbox"] [data-baseweb="select"],
+[data-testid="stSelectbox"] [data-baseweb="select"] * {
+    background-color: #EAF4E6 !important;
+    color: #0F2417 !important;
+    -webkit-text-fill-color: #0F2417 !important;
+}
+[data-testid="stSelectbox"] [data-baseweb="select"] > div {
+    border: 1.5px solid #9CC7A3 !important;
+    border-radius: 10px !important;
+}
+/* keep the label and the wrapper itself clean */
+[data-testid="stSelectbox"],
+[data-testid="stSelectbox"] [data-testid="stWidgetLabel"],
+[data-testid="stSelectbox"] [data-testid="stWidgetLabel"] * {
+    background-color: transparent !important;
+}
+[data-testid="stSelectbox"] svg, [data-testid="stSelectbox"] svg * {
+    background-color: transparent !important;
+    fill: #1F4A2C !important;
+}
+/* Same treatment for any other widget that might render dark */
+[data-baseweb="select"] > div, [data-baseweb="select"] > div > div { background-color: #EAF4E6 !important; }
 </style>
 """
 st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
