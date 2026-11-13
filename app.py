@@ -14,6 +14,7 @@ Alternative to the environment variable: create .streamlit/secrets.toml with
 or paste the key into the sidebar while the app is running.
 """
 
+import html
 import json
 import os
 import re
@@ -301,15 +302,40 @@ div[data-baseweb="popover"] li:hover, div[data-baseweb="popover"] li[aria-select
 [data-testid="stSelectbox"] [data-testid="stWidgetLabel"] * {
     background-color: transparent !important;
 }
-[data-testid="stSelectbox"] svg, [data-testid="stSelectbox"] svg * {
+[data-testid="stSelectbox"] svg {
     background-color: transparent !important;
     fill: #1F4A2C !important;
+    color: #1F4A2C !important;
 }
+[data-testid="stSelectbox"] svg * { background-color: transparent !important; }
 /* Same treatment for any other widget that might render dark */
 [data-baseweb="select"] > div, [data-baseweb="select"] > div > div { background-color: #EAF4E6 !important; }
+
+/* ---- Soft alert boxes (replace Streamlit's dark red/yellow/blue banners) ---- */
+.stApp .alert {
+    border-radius: 12px;
+    padding: .8rem 1.1rem;
+    margin: .5rem 0;
+    border: 1px solid;
+    border-left-width: 5px;
+    font-size: .98rem;
+    font-weight: 500;
+}
+.stApp .alert-error   { background: #FCEBEA; border-color: #E9A9A4; color: #7A2B26 !important; }
+.stApp .alert-warning { background: #FFF5DC; border-color: #EACB7C; color: #6B4E0F !important; }
+.stApp .alert-success { background: #E4F3E4; border-color: #9CCB9F; color: #1F4A2C !important; }
+.stApp .alert-info    { background: #E7F1F8; border-color: #A9C8DE; color: #254A63 !important; }
+.stApp .alert b { color: inherit !important; }
 </style>
 """
 st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
+
+
+def alert(kind: str, text: str) -> None:
+    """Show a soft-coloured message box. kind: error, warning, success or info."""
+    safe = html.escape(str(text))
+    safe = re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", safe)  # allow **bold**
+    st.markdown(f'<div class="alert alert-{kind}">{safe}</div>', unsafe_allow_html=True)
 
 
 # ---------------------------------------------------------------------------
@@ -582,7 +608,7 @@ def show_output(title: str, text: str, file_stub: str, as_markdown: bool = True)
 
 def need_results() -> bool:
     if "results" not in st.session_state:
-        st.info("No content yet. Open **Create Content** in the sidebar, fill in the form and click Generate Content.")
+        alert("info", "No content yet. Open **Create Content** in the sidebar, fill in the form and click Generate Content.")
         return False
     return True
 
@@ -643,7 +669,7 @@ def page_create() -> None:
 
     if not submitted:
         if "results" in st.session_state:
-            st.success("Your content is ready. Use the sidebar to open each section.")
+            alert("success", "Your content is ready. Use the sidebar to open each section.")
         return
 
     # ----- Input validation -----
@@ -661,10 +687,10 @@ def page_create() -> None:
         errors.append("Please describe the product features in a little more detail (at least 15 characters).")
     if errors:
         for message in errors:
-            st.error(message)
+            alert("error", message)
         return
     if not get_api_key():
-        st.error("No Groq API key found. Add it to Streamlit secrets, set the GROQ_API_KEY environment "
+        alert("error", "No Groq API key found. Add it to Streamlit secrets, set the GROQ_API_KEY environment "
                  "variable, or paste it into the sidebar.")
         return
 
@@ -673,7 +699,7 @@ def page_create() -> None:
         with st.spinner("The AI is working on your content. This usually takes 20-40 seconds."):
             st.session_state["results"] = run_generation(values)
     except RuntimeError as exc:
-        st.error(str(exc))
+        alert("error", str(exc))
         return
 
     st.session_state["goto"] = "Blog Post"
@@ -714,7 +740,7 @@ def page_comparison() -> None:
     res = st.session_state["results"]
     ev = res.get("evaluation")
     if not ev:
-        st.warning("The comparison could not be generated. Click Generate Content again to retry.")
+        alert("warning", "The comparison could not be generated. Click Generate Content again to retry.")
         for w in res["warnings"]:
             st.caption(w)
         return
@@ -765,13 +791,13 @@ def page_recommendations() -> None:
                 st.markdown(f"**Weaknesses:** {ev['weaknesses'][item]}")
                 st.markdown(f"**Recommended platform:** {ev['platforms'][item]}")
     else:
-        st.warning("The AI evaluation could not be generated. Click Generate Content again to retry.")
+        alert("warning", "The AI evaluation could not be generated. Click Generate Content again to retry.")
 
     st.subheader("Audience engagement recommendations")
     if res.get("recommendations"):
         show_output("Engagement plan", res["recommendations"], "engagement_recommendations")
     else:
-        st.warning("Recommendations could not be generated this time.")
+        alert("warning", "Recommendations could not be generated this time.")
 
     for w in res["warnings"]:
         st.caption(w)
@@ -798,7 +824,7 @@ def sidebar() -> str:
                           help="Stored only in this browser session. For a permanent setup, "
                                "use Streamlit secrets or an environment variable.")
         else:
-            st.success("API key detected")
+            alert("success", "API key detected")
 
         if "results" in st.session_state:
             st.divider()
@@ -830,6 +856,10 @@ def main() -> None:
         "AI Recommendations": page_recommendations,
     }
     routes[page]()
+
+
+if __name__ == "__main__":
+    main()
 
 
 if __name__ == "__main__":
